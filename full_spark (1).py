@@ -40,34 +40,39 @@ df1_latest.show()
 dfRename = df1_latest.withColumnRenamed("func","func_c")
 dfRename.show()
 # Pegando os que finalizaram da ultima particao
-df_ind_1 = dfRename.where("ind_f == 1")
+df_ind_1 = dfRename.where("ind_finalizada == 1")
 # Fazendo join somente com os que finalizaram
 joined_df = df_ind_1.join(df2_latest, df_ind_1.func_c == df2_latest.func, "inner")
 
 joined_df.show()
 # Renomeando coluna 
+# n necessario +
 df_e = sparkDf3.withColumnRenamed("anomesdia","mesdiaano")
 df_e.show()
 # Join p/ validar cod
-joined_validation = joined_df.join(df_e, joined_df.func_c == df_e.func, "inner")
+#joined_validation = joined_df.join(df_e, joined_df.func_c == df_e.func, "inner")
+# Subtraindo os DataFrames para encontrar os registros que não estão em df_e
+joined_validation = joined_df.join(df_e, joined_df.func_c == df_e.func, "left_anti")
 
 joined_validation.show()
 # Validando cod |||| usar ~ nega a condicao
-final_validation = joined_validation.filter(col("cod_m").contains(col("cod_t")))
+#final_validation = joined_validation.filter(col("cod_module").contains(col("cod_trilha")))
+
+# Coletar os valores da coluna "cod_module" de df_e como uma lista
+valores_cod_module = [row["cod_module"] for row in df_e.select("cod_module").collect()]
+
+# Filtro usando isin() para verificar se os valores da coluna "cod_trilha" de joined_validation estão contidos na lista de valores de "cod_module" de df_e
+final_validation = joined_validation.filter(col("cod_trilha").isin(valores_cod_module))
 
 final_validation.show(5)
 # Dropando colunas desnecessárias
 final_df = final_validation.drop(
     "func", 
-    "c_cargo", 
-    "n_cargo", 
-    "data_atualizacao", 
+    "cod", 
+    "n", 
+    "data_at", 
     "pct_",
-    "prod", 
-    "cat", 
-    "cod_m", 
-    "ganhador",
-    "mesdiaano"
+    "cod"
 )
 
 final_df.show()
